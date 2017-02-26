@@ -1,44 +1,54 @@
 import pandas as pd
 from datetime import datetime
-import pandas_datareader.data as web
+from yahoo_finance import Share
 
 
-# def create_test_data(my_seed=42, num_days=100):
-#
-#     np.random.seed(my_seed)
-#
-#     data = np.random.normal(loc=0.001, scale=0.05, size=(num_days, 5))
-#     dates = pd.date_range('1/1/2000', periods=num_days, freq='D', tz='UTC')
-#     assets = ['asset_a', 'asset_b', 'asset_c', 'asset_d', 'asset_e']
-#
-#     returns = pd.DataFrame(data, columns=assets, index=dates)
-#     avg_rets = returns.mean()
-#     cov_mat = returns.cov()
-#
-#     return returns, cov_mat, avg_rets
-
-
-def get_stock_data(stock_tickers=['AAPL', 'GOOG', 'MSFT', 'AMZN'], start_date=None, end_date=None):
+def get_stock_data(
+        stock_tickers=['AAPL', 'GOOG', 'MSFT', 'AMZN'],
+        start_date=None,
+        end_date=None):
 
     if not end_date:
         end_date = datetime.now()
 
     if not start_date:
-        start_date = datetime(end_date.year - 1, end_date.month, end_date.day)
+        start_date = datetime(end_date.year - 2, end_date.month, end_date.day)
 
+    start_date = start_date.strftime("%Y-%m-%d")
+    end_date = end_date.strftime("%Y-%m-%d")
+
+    st_list = []
     return_list = []
 
     for st in stock_tickers:
 
-        st_data = web.DataReader(st, 'google', start_date, end_date)
-        st_return = st_data['Close'].pct_change()
-        return_list.append(st_return)
+        try:
+            st_dict = Share(st).get_historical(start_date, end_date)
+            st_data = pd.DataFrame.from_dict(st_dict)
+
+            for col in st_data.columns:
+                if col not in ['Date', 'Symbol']:
+                    st_data[col] = pd.to_numeric(st_data[col], errors='coerce')
+
+            st_data.set_index('Date', drop=True, inplace=True)
+
+            st_list.append(st_data)
+
+            st_return = st_data['Adj_Close'].pct_change()
+            return_list.append(st_return)
+
+        except ValueError as ve:
+            print('ERROR: Your search string is invalid: {}'.format(ve))
+
+        except Exception as x:
+            print(st)
+            print("ERROR: {}".format(x))
 
     returns = pd.concat(return_list, axis=1)
-    returns.dropna(axis=0, how='all', inplace=True)
+    returns.dropna(axis=0, how='any', inplace=True)
     returns.columns = stock_tickers
 
     avg_rets = returns.mean()
     cov_mat = returns.cov()
 
-    return returns, cov_mat, avg_rets
+    return st_list, returns, cov_mat, avg_rets

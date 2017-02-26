@@ -21,7 +21,12 @@ def print_portfolio_info(returns, avg_rets, weights):
 
 
 def main():
-    returns, cov_mat, avg_rets = gd.get_stock_data()
+    raw_tickers = input('Enter stocks separated by a comma: ')
+    investment = int(input("Enter total investment to allocate: "))
+
+    stock_tickers = raw_tickers.split(", ")
+    print(stock_tickers)
+    listed_prices, returns, cov_mat, avg_rets = gd.get_stock_data(stock_tickers)
 
     section("Example returns")
     print(returns.head(10))
@@ -36,10 +41,8 @@ def main():
     section("Minimum variance portfolio (long only)")
     weights = pfopt.min_var_portfolio(cov_mat)
     print_portfolio_info(returns, avg_rets, weights)
-
-    section("Minimum variance portfolio (long/short)")
-    weights = pfopt.min_var_portfolio(cov_mat, allow_short=True)
-    print_portfolio_info(returns, avg_rets, weights)
+    allocation = investment * weights
+    print(allocation)
 
     # Define some target return, here the 70% quantile of the average returns
     target_ret = avg_rets.quantile(0.7)
@@ -47,24 +50,8 @@ def main():
     section("Markowitz portfolio (long only, target return: {:.5f})".format(target_ret))
     weights = pfopt.markowitz_portfolio(cov_mat, avg_rets, target_ret)
     print_portfolio_info(returns, avg_rets, weights)
-
-    section("Markowitz portfolio (long/short, target return: {:.5f})".format(target_ret))
-    weights = pfopt.markowitz_portfolio(cov_mat, avg_rets, target_ret, allow_short=True)
-    print_portfolio_info(returns, avg_rets, weights)
-
-    section("Markowitz portfolio (market neutral, target return: {:.5f})".format(target_ret))
-    weights = pfopt.markowitz_portfolio(cov_mat, avg_rets, target_ret, allow_short=True,
-                                        market_neutral=True)
-    print_portfolio_info(returns, avg_rets, weights)
-
-    section("Tangency portfolio (long only)")
-    weights = pfopt.tangency_portfolio(cov_mat, avg_rets)
-    weights = pfopt.truncate_weights(weights)  # Truncate some tiny weights
-    print_portfolio_info(returns, avg_rets, weights)
-
-    section("Tangency portfolio (long/short)")
-    weights = pfopt.tangency_portfolio(cov_mat, avg_rets, allow_short=True)
-    print_portfolio_info(returns, avg_rets, weights)
+    allocation = investment * weights
+    print(allocation)
 
 
 if __name__ == '__main__':
